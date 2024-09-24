@@ -21,7 +21,6 @@ class LeaderboardPage extends StatelessWidget {
         Map<String, dynamic> data = doc.data();
         print('Fetching user for userId: ${data['userId']}');
 
-        // Fetch user name from users collection based on userId
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('user')
             .doc('YmmU9zvMUgeMhBxbEUVRkI9ebvB3')  // Replace with a valid userId
