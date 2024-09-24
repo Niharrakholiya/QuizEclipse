@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668795222324",
+    "project_id": "quizeclipse-84e09",
+    "storage_bucket": "quizeclipse-84e09.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668795222324:android:b6be0fdbf26bf805c94d61",
+        "android_client_info": {
+          "package_name": "com.example.quizeclipse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfVodm_vSn-e2XlKymVJQmGRUZQp185vM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
