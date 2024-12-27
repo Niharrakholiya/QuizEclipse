@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:quizeclipse/models/user.dart';
 import 'package:quizeclipse/utils/constants.dart';
 import 'package:quizeclipse/utils/db.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
 
 addUser(User user)
 {

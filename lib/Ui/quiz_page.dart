@@ -7,9 +7,9 @@ import 'leader_board.dart';
 
 class QuizPage extends StatefulWidget {
   final String quizId;
-  final String userId; // Add userId field
+  final String email; // Add userId field
 
-  QuizPage({required this.quizId, required this.userId}); // Include userId in constructor
+  QuizPage({required this.quizId, required this.email}); // Include userId in constructor
 
   @override
   _QuizPageState createState() => _QuizPageState();
@@ -97,25 +97,80 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Future<void> _recordAttempt() async {
+    print("========== Starting _recordAttempt ==========");
+
     try {
-      // Add a new quiz attempt and store its ID
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('user')
-          .doc(widget.userId)
-          .get();
+      // 1. User Document Fetch using email
+      print("Step 1: Attempting to fetch user document by email");
+      print('Email being used: ${widget.email}');
 
+      QuerySnapshot userQuery;
+      try {
+        userQuery = await FirebaseFirestore.instance
+            .collection('user')
+            .where('email', isEqualTo: widget.email)
+            .limit(1)
+            .get();
 
+        print('User query result:');
+        print('- Has documents: ${userQuery.docs.isNotEmpty}');
+        print('- Number of documents: ${userQuery.docs.length}');
+      } catch (e) {
+        print('❌ Error fetching user document:');
+        print('- Error type: ${e.runtimeType}');
+        print('- Error message: $e');
+        print('- Stack trace: ${StackTrace.current}');
+        return;
+      }
 
-      // Now add a new quiz attempt with the user's name
-      DocumentReference attemptRef = await FirebaseFirestore.instance.collection('quizAttempts').add({
-        'userId': widget.userId,
-        'quizId': widget.quizId,
-        'score': score,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      attemptId = attemptRef.id;
+      // 2. Username Extraction
+      print("\nStep 2: Extracting username");
+      String userName = 'Unknown User';
+      if (userQuery.docs.isNotEmpty) {
+        try {
+          Map<String, dynamic> userData =
+          userQuery.docs.first.data() as Map<String, dynamic>;
+          userName = userData['name'] ?? 'Unknown User';
+          print('Successfully extracted username: $userName');
+        } catch (e) {
+          print('❌ Error extracting username:');
+          print('- Error type: ${e.runtimeType}');
+          print('- Error message: $e');
+        }
+      } else {
+        print('⚠️ No user document found for email: ${widget.email}');
+      }
+
+      // 3. Creating Quiz Attempt
+      print("\nStep 3: Creating quiz attempt record");
+      try {
+        DocumentReference attemptRef = await FirebaseFirestore.instance
+            .collection('quizAttempts')
+            .add({
+          'email': widget.email, // Store email instead of userId
+          'userName': userName,
+          'quizId': widget.quizId,
+          'score': score,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+        attemptId = attemptRef.id;
+        print('✅ Successfully created quiz attempt:');
+        print('- Attempt ID: $attemptId');
+      } catch (e) {
+        print('❌ Error creating quiz attempt:');
+        print('- Error type: ${e.runtimeType}');
+        print('- Error message: $e');
+        print('- Stack trace: ${StackTrace.current}');
+      }
+
     } catch (e) {
-      print('Error recording quiz attempt: $e');
+      print('❌ CRITICAL ERROR in _recordAttempt:');
+      print('- Error type: ${e.runtimeType}');
+      print('- Error message: $e');
+      print('- Stack trace: ${StackTrace.current}');
+    } finally {
+      print("========== Ending _recordAttempt ==========\n");
     }
   }
   Future<void> _updateScore() async {
@@ -128,7 +183,6 @@ class _QuizPageState extends State<QuizPage> {
       print('Error updating score: $e');
     }
   }
-
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (Timer timer) {
       if (_remainingTime == 0) {

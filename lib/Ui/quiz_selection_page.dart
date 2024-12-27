@@ -4,16 +4,18 @@ import 'package:quizeclipse/models/quiz.dart';
 import 'package:quizeclipse/Ui/quiz_page.dart';
 
 class QuizSelectionPage extends StatelessWidget {
-  final String userId;
+  final String userEmail;
 
-  QuizSelectionPage({required this.userId});
-
+  const QuizSelectionPage({
+    Key? key,
+    required this.userEmail,
+  }) : super(key: key);
   Future<bool> _hasAttemptedQuiz(String quizId) async {
-    print(userId);
+    print(userEmail);
     print(quizId);
     final query = await FirebaseFirestore.instance
         .collection('quizAttempts')
-        .where('userId', isEqualTo: userId)
+        .where('email', isEqualTo: userEmail)
         .where('quizId', isEqualTo: quizId)
         .get();
     print(query.docs.isNotEmpty);
@@ -48,7 +50,7 @@ class QuizSelectionPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => QuizPage(quizId: quizId, userId: userId),
+                      builder: (context) => QuizPage(quizId: quizId, email: userEmail),
                     ),
                   );
                 } else {

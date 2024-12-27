@@ -7,54 +7,81 @@ class LeaderboardPage extends StatelessWidget {
   LeaderboardPage({required this.quizId});
 
   Future<List<Map<String, dynamic>>> _fetchLeaderboard() async {
+    print("========== Starting Leaderboard Fetch ==========");
     try {
+      print("Fetching quiz attempts for quizId: $quizId");
+
+      // 1. Fetch quiz attempts
       final querySnapshot = await FirebaseFirestore.instance
           .collection('quizAttempts')
           .where('quizId', isEqualTo: quizId)
           .orderBy('score', descending: true)
-          .orderBy('timestamp', descending: false)  // Changed to ascending
-          .limit(50)  // Limit to top 50 scores for performance
+          .orderBy('timestamp', descending: false)
+          .limit(50)
           .get();
 
+      print("Found ${querySnapshot.docs.length} quiz attempts");
+
       List<Map<String, dynamic>> leaderboard = [];
+
+      // 2. Process each attempt
       for (var doc in querySnapshot.docs) {
         Map<String, dynamic> data = doc.data();
-        print('Fetching user for userId: ${data['userId']}');
+        String userId = data['userId'] ?? 'unknown';
+        print('\nProcessing attempt:');
+        print('- Attempt ID: ${doc.id}');
+        print('- User ID: $userId');
+        print('- Score: ${data['score']}');
 
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection('user')
-            .doc('YmmU9zvMUgeMhBxbEUVRkI9ebvB3')  // Replace with a valid userId
-            .get();
+        try {
+          // 3. Fetch user data using the correct userId from the attempt
+          print('Fetching user data for userId: $userId');
+          DocumentSnapshot userDoc = await FirebaseFirestore.instance
+              .collection('user')
+              .doc(userId)
+              .get();
 
-        if (userDoc.exists) {
-          // Extract the required fields from the user document
-          String userName = userDoc['name'] ?? 'Unknown';
-          String email = userDoc['email'] ?? 'Unknown Email';
-          String role = userDoc['role'] ?? 'Unknown Role';
+          String userName;
+          if (userDoc.exists) {
+            Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+            userName = userData['name'] ?? 'Unknown User';
+            print('✅ Found user: $userName');
+          } else {
+            userName = data['userName'] ?? 'Unknown User';
+            print('⚠️ User document not found, using attempt userName: $userName');
+          }
 
-          print('User Name: $userName');
-          print('Email: $email');
-          print('Role: $role');
-        } else {
-          print('User not found');
+          // 4. Add to leaderboard
+          leaderboard.add({
+            'userName': userName,
+            'score': data['score'] ?? 0,
+            'timestamp': data['timestamp'] ?? Timestamp.now(),
+            'userId': userId,
+          });
+
+        } catch (userError) {
+          print('❌ Error fetching user data:');
+          print('- Error: $userError');
+          // Still add to leaderboard with available data
+          leaderboard.add({
+            'userName': data['userName'] ?? 'Unknown User',
+            'score': data['score'] ?? 0,
+            'timestamp': data['timestamp'] ?? Timestamp.now(),
+            'userId': userId,
+          });
         }
-        // Check if the user document exists
-        String userName = 'Unknown User';
-        if (userDoc.exists) {
-          userName = userDoc.get('name') ?? 'Unknown User';
-        }
-
-        leaderboard.add({
-          'userName': userName,
-          'score': data['score'],
-          'timestamp': data['timestamp'],
-        });
       }
 
+      print("\n✅ Successfully compiled leaderboard with ${leaderboard.length} entries");
       return leaderboard;
+
     } catch (e) {
-      print('Error fetching leaderboard data: $e');
+      print('❌ CRITICAL ERROR in _fetchLeaderboard:');
+      print('- Error: $e');
+      print('- Stack trace: ${StackTrace.current}');
       return [];
+    } finally {
+      print("========== Ending Leaderboard Fetch ==========\n");
     }
   }
 
@@ -70,14 +97,40 @@ class LeaderboardPage extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError || !snapshot.hasData) {
-            return Center(child: Text('Error fetching leaderboard'));
           }
 
-          List<Map<String, dynamic>> leaderboard = snapshot.data!;
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    'Error loading leaderboard',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          List<Map<String, dynamic>> leaderboard = snapshot.data ?? [];
 
           if (leaderboard.isEmpty) {
-            return Center(child: Text('No attempts found for this quiz.'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.emoji_events_outlined, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No attempts found for this quiz',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
@@ -88,21 +141,31 @@ class LeaderboardPage extends StatelessWidget {
                 margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: _getPositionColor(index),
                     child: Text('${index + 1}'),
                   ),
-                  title: Text(entry['userName'], style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(
+                    entry['userName'],
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         'Score: ${entry['score']}',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
                       ),
                       Text(
                         _formatDate(entry['timestamp']),
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -113,6 +176,19 @@ class LeaderboardPage extends StatelessWidget {
         },
       ),
     );
+  }
+
+  Color _getPositionColor(int index) {
+    switch (index) {
+      case 0:
+        return Colors.amber; // Gold
+      case 1:
+        return Colors.blueGrey; // Silver
+      case 2:
+        return Colors.brown; // Bronze
+      default:
+        return Colors.blue;
+    }
   }
 
   String _formatDate(Timestamp timestamp) {

@@ -6,12 +6,16 @@ import 'package:quizeclipse/Ui/leader_board.dart';  // Import LeaderboardPage
 class ParticipantHomePage extends StatelessWidget {
   final AuthService auth = AuthService();
 
-  Future<String> _getUserId() async {
+  Future<Map<String, String>> _getUserInfo() async {
     String? userId = auth.getUserId();
-    if (userId != null) {
-      return userId;
+    String? userEmail = auth.getCurrentUserEmail(); // Add method to get email
+    if (userId != null && userEmail != null) {
+      return {
+        'userId': userId,
+        'email': userEmail,
+      };
     } else {
-      throw Exception('User not logged in or user ID not available.');
+      throw Exception('User not logged in or user info not available.');
     }
   }
 
@@ -21,8 +25,8 @@ class ParticipantHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: _getUserId(),
+    return FutureBuilder<Map<String,String>>(
+      future: _getUserInfo(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
@@ -36,8 +40,8 @@ class ParticipantHomePage extends StatelessWidget {
           );
         }
 
-        String userId = snapshot.data!;
-
+        final userId = snapshot.data!['userId']!;
+        final userEmail = snapshot.data!['email']!;
         return Scaffold(
           backgroundColor: Colors.grey[100],
           appBar: AppBar(
@@ -126,7 +130,9 @@ class ParticipantHomePage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => QuizSelectionPage(userId: userId),
+                            builder: (context) => QuizSelectionPage(
+                              userEmail: userEmail, // Pass email
+                            ),
                           ),
                         );
                       },
@@ -134,18 +140,7 @@ class ParticipantHomePage extends StatelessWidget {
                       isPrimary: true,
                     ),
                     SizedBox(height: 16),
-                    _buildButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LeaderboardPage(quizId: 'RC7WE8'),  // Pass quizId
-                          ),
-                        );
-                      },
-                      text: 'View Leaderboard',
-                      isPrimary: false,
-                    ),
+
                   ],
                 ),
               ),

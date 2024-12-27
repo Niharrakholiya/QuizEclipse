@@ -41,6 +41,9 @@ class AuthService{
     User? user = auth.currentUser;
     return user?.uid;
   }
+  String? getCurrentUserEmail() {
+    return auth.currentUser?.email;
+  }
 //
 }
 
